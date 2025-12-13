@@ -289,7 +289,7 @@ function smartNoteToABC(
 		}
 	}
 
-	let pitch = note.name;
+	let pitch: string = note.name;
 	if (note.octave === 4) pitch = pitch.toUpperCase();
 	else if (note.octave === 5) pitch = pitch.toLowerCase();
 	else if (note.octave === 6) pitch = `${pitch.toLowerCase()}'`;
@@ -299,6 +299,14 @@ function smartNoteToABC(
 
 	return `${outputAcc}${pitch}`;
 }
+
+const CADENCE_RH_OFFSETS_MINOR = [
+	[0],
+	[2, 8, 12],
+	[3, 7, 12],
+	[2, 5, 7, 11],
+	[0, 3, 7, 12],
+];
 
 export function generateGrandStaffABC(root: Note, type: ScaleType): string {
 	// 1. Determine Key Signature string and Map
@@ -353,7 +361,12 @@ export function generateGrandStaffABC(root: Note, type: ScaleType): string {
 
 	// Helper to resolve note from absolute semitone relative to Root context
 	const resolveNote = (semitoneOffset: number): Note => {
-		const preferFlat = root.accidental.includes("b") || root.name === "F";
+		// Prefer flats if the Key Signature (Natural Scale) has flats
+		const preferFlat =
+			root.accidental.includes("b") ||
+			root.name === "F" ||
+			keyNotes.some((n) => n.accidental.includes("b"));
+
 		const currentAbs = getAbsoluteSemitone(root);
 		const targetAbs = currentAbs + semitoneOffset;
 		const note = getNoteFromSemitone(targetAbs, preferFlat);
@@ -376,7 +389,8 @@ export function generateGrandStaffABC(root: Note, type: ScaleType): string {
 		return `${c0} ${c1} | ${c2} ${c3} | ${c4}`;
 	};
 
-	const rhCadenceBar = formatCadence(CADENCE_RH_OFFSETS);
+	const rhOffsets = isMinor ? CADENCE_RH_OFFSETS_MINOR : CADENCE_RH_OFFSETS;
+	const rhCadenceBar = formatCadence(rhOffsets);
 	const lhCadenceBar = formatCadence(CADENCE_LH_OFFSETS);
 
 	return `
