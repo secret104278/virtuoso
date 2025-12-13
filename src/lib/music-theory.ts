@@ -21,7 +21,13 @@ export interface ScaleDefinition {
 // User provided cadence voicing (Semitone offsets from Root)
 // Note: These need to be interpreted carefully regarding octave.
 // Assuming 0 is the Root Note (e.g. C4).
-const CADENCE_LH_OFFSETS = [[-12], [5, -7], [7, -5], [-5, -17], [0, -12]];
+const CADENCE_LH_OFFSETS = [
+	[-24],
+	[-7, -19],
+	[-5, -17],
+	[-17, -29],
+	[-12, -24],
+];
 const CADENCE_RH_OFFSETS = [
 	[0],
 	[2, 9, 12],
