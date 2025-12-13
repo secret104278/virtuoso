@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Music, RotateCcw, Shuffle } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, ArrowRight, Shuffle } from "lucide-react";
 import { createParser, parseAsStringEnum, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,6 @@ import {
 	getNextFifth,
 	getPrevFifth,
 	getRelativeNote,
-	getStandardKey,
 	isStandardKey,
 	type Note,
 	SELECTABLE_ROOTS as ROOTS,
@@ -180,6 +179,16 @@ export function PianoPractice() {
 									</div>
 								)}
 							</div>
+
+							<Button
+								variant="ghost"
+								size="icon"
+								onClick={handleRelative}
+								title={`Switch to Relative ${scaleType === "Major" ? "Minor" : "Major"}`}
+								className="text-slate-400 hover:text-slate-900"
+							>
+								<ArrowLeftRight className="h-5 w-5" />
+							</Button>
 						</div>
 					</div>
 
@@ -217,17 +226,6 @@ export function PianoPractice() {
 			</Card>
 
 			<div className="space-y-4 w-full">
-				<div className="grid grid-cols-1 gap-3 pt-2">
-					<Button
-						variant="outline"
-						onClick={handleRelative}
-						className="h-10 text-xs border-slate-200 hover:bg-slate-50 hover:text-slate-900"
-					>
-						<Music className="mr-2 h-3 w-3" />
-						Relative {scaleType === "Major" ? "Minor" : "Major"}
-					</Button>
-				</div>
-
 				<Metronome />
 			</div>
 		</div>
