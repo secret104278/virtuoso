@@ -267,13 +267,16 @@ export function getPrevFifth(root: Note): Note {
 
 export function getRelativeNote(root: Note, type: ScaleType): Note {
 	const current = getNoteSemitone(root);
+	let note: Note;
 	if (type === "Major") {
-		return getNoteFromSemitone(
+		note = getNoteFromSemitone(
 			current - 3,
 			root.accidental.includes("b") || root.name === "F",
 		);
+		return getStandardKey(note, "Minor (Natural)"); // Relative is always natural minor context for key naming
 	} else {
-		return getNoteFromSemitone(current + 3, root.accidental.includes("b"));
+		note = getNoteFromSemitone(current + 3, root.accidental.includes("b"));
+		return getStandardKey(note, "Major");
 	}
 }
 
@@ -452,6 +455,7 @@ export function isStandardKey(root: Note, type: ScaleType): boolean {
 		if (name === "E" && acc === "#") return false;
 		if (name === "B" && acc === "#") return false;
 		if (name === "F" && acc === "#") return false; // Prefer Gb Major
+		if (name === "C" && acc === "#") return false; // Prefer Db Major
 	}
 
 	// Minor Keys Avoid:
@@ -469,4 +473,22 @@ export function isStandardKey(root: Note, type: ScaleType): boolean {
 	}
 
 	return true;
+}
+
+export function getStandardKey(root: Note, type: ScaleType): Note {
+	if (isStandardKey(root, type)) return root;
+
+	// If not standard, try enharmonic equivalent
+	const semitone = getNoteSemitone(root);
+	// Try both sharp and flat version, see which one is standard
+	// We can assume strict enharmonic check here for standard roots
+	const candidates = SELECTABLE_ROOTS.filter(
+		(r) => getNoteSemitone(r) === semitone,
+	);
+
+	for (const c of candidates) {
+		if (isStandardKey(c, type)) return c;
+	}
+
+	return root; // Fallback
 }

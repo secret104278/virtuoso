@@ -10,11 +10,13 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
 	generateGrandStaffABC as generateABC,
 	getNextFifth,
 	getPrevFifth,
 	getRelativeNote,
+	getStandardKey,
 	isStandardKey,
 	type Note,
 	SELECTABLE_ROOTS as ROOTS,
@@ -91,12 +93,6 @@ export function PianoPractice() {
 		setScaleType(newType);
 	};
 
-	// Toggle Parallel Major/Minor
-	const handleParallel = () => {
-		if (scaleType === "Major") setScaleType("Minor (Harmonic)");
-		else setScaleType("Major");
-	};
-
 	return (
 		<div className="flex flex-col gap-6 p-4 max-w-4xl mx-auto w-full min-h-dvh justify-center py-4">
 			<div className="text-center space-y-1 mb-2">
@@ -141,28 +137,49 @@ export function PianoPractice() {
 											>
 												{r.name}
 												{r.accidental}
-												{!isStandard && " (Theoretical)"}
 											</SelectItem>
 										);
 									})}
 								</SelectContent>
 							</Select>
 
-							<Select
-								value={scaleType}
-								onValueChange={(v) => setScaleType(v as ScaleType)}
-							>
-								<SelectTrigger className="h-auto border-0 shadow-none bg-transparent p-0 text-lg font-serif font-medium text-slate-800 opacity-80 hover:opacity-100 focus:ring-0 focus:ring-offset-0 w-auto [&>svg]:hidden text-left">
-									<SelectValue />
-								</SelectTrigger>
-								<SelectContent align="start">
-									{SCALE_TYPES.map((t) => (
-										<SelectItem key={t} value={t}>
-											{t}
-										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
+							{/* Split Scale Type Selector */}
+							<div className="flex items-center gap-2">
+								{/* Major / Minor Toggle */}
+								<div className="flex items-center">
+									<Tabs
+										value={scaleType === "Major" ? "Major" : "Minor"}
+										onValueChange={(v) => {
+											if (v === "Major") setScaleType("Major");
+											else setScaleType("Minor (Harmonic)");
+										}}
+									>
+										<TabsList>
+											<TabsTrigger value="Major">Major</TabsTrigger>
+											<TabsTrigger value="Minor">Minor</TabsTrigger>
+										</TabsList>
+									</Tabs>
+								</div>
+
+								{/* Minor Type Sub-selector (only if Minor) */}
+								{scaleType.startsWith("Minor") && (
+									<div className="flex items-center animate-in fade-in slide-in-from-left-2 duration-200">
+										<Tabs
+											value={scaleType}
+											onValueChange={(v) => setScaleType(v as ScaleType)}
+										>
+											<TabsList>
+												<TabsTrigger value="Minor (Harmonic)">
+													Harmonic
+												</TabsTrigger>
+												<TabsTrigger value="Minor (Melodic)">
+													Melodic
+												</TabsTrigger>
+											</TabsList>
+										</Tabs>
+									</div>
+								)}
+							</div>
 						</div>
 					</div>
 
@@ -200,7 +217,7 @@ export function PianoPractice() {
 			</Card>
 
 			<div className="space-y-4 w-full">
-				<div className="grid grid-cols-2 gap-3 pt-2">
+				<div className="grid grid-cols-1 gap-3 pt-2">
 					<Button
 						variant="outline"
 						onClick={handleRelative}
@@ -208,14 +225,6 @@ export function PianoPractice() {
 					>
 						<Music className="mr-2 h-3 w-3" />
 						Relative {scaleType === "Major" ? "Minor" : "Major"}
-					</Button>
-					<Button
-						variant="outline"
-						onClick={handleParallel}
-						className="h-10 text-xs border-slate-200 hover:bg-slate-50 hover:text-slate-900"
-					>
-						<RotateCcw className="mr-2 h-3 w-3" />
-						Parallel {scaleType === "Major" ? "Minor" : "Major"}
 					</Button>
 				</div>
 
