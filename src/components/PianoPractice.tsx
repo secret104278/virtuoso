@@ -1,5 +1,6 @@
 import { ArrowLeft, ArrowRight, Music, RotateCcw, Shuffle } from "lucide-react";
-import { useMemo, useState } from "react";
+import { createParser, parseAsStringEnum, useQueryState } from "nuqs";
+import { useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader } from "@/components/ui/card";
 import {
@@ -18,6 +19,7 @@ import {
 	type Note,
 	SELECTABLE_ROOTS as ROOTS,
 	type ScaleType,
+	SELECTABLE_ROOTS,
 } from "@/lib/music-theory";
 import { Metronome } from "./Metronome";
 import { SheetMusic } from "./SheetMusic";
@@ -30,9 +32,28 @@ const SCALE_TYPES: ScaleType[] = [
 
 const INITIAL_NOTE: Note = { name: "C", accidental: "", octave: 4 };
 
+// Custom parser for Note object <-> URL string (e.g. "C#")
+const rootNoteParser = createParser({
+	parse: (query) => {
+		return (
+			SELECTABLE_ROOTS.find((r) => `${r.name}${r.accidental}` === query) ??
+			INITIAL_NOTE
+		);
+	},
+	serialize: (value) => `${value.name}${value.accidental}`,
+})
+	.withDefault(INITIAL_NOTE)
+	.withOptions({ history: "push" });
+
+const scaleTypeParser = parseAsStringEnum<ScaleType>(SCALE_TYPES)
+	.withDefault("Major")
+	.withOptions({
+		history: "push",
+	});
+
 export function PianoPractice() {
-	const [root, setRoot] = useState<Note>(INITIAL_NOTE);
-	const [scaleType, setScaleType] = useState<ScaleType>("Major");
+	const [root, setRoot] = useQueryState("root", rootNoteParser);
+	const [scaleType, setScaleType] = useQueryState("scale", scaleTypeParser);
 
 	const abc = useMemo(() => generateABC(root, scaleType), [root, scaleType]);
 
@@ -55,6 +76,7 @@ export function PianoPractice() {
 			}
 			attempts++;
 		}
+
 		setRoot(r);
 		setScaleType(type);
 	};

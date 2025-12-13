@@ -1,6 +1,7 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
 
 import appCss from "../styles.css?url";
 
@@ -93,7 +94,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<HeadContent />
 			</head>
 			<body>
-				{children}
+				<NuqsAdapter>{children}</NuqsAdapter>
 				<TanStackDevtools
 					config={{
 						position: "bottom-right",
