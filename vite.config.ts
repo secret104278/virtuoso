@@ -55,6 +55,18 @@ const config = defineConfig(({ isSsrBuild }) => {
         },
       }),
     ],
+    build: {
+      chunkSizeWarningLimit: 600,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom'],
+            'tanstack-vendor': ['@tanstack/react-router', '@tanstack/react-start'],
+            'abcjs': ['abcjs']
+          }
+        }
+      }
+    }
   }
 })
 
