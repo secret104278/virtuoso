@@ -76,9 +76,18 @@ export function Metronome() {
 		timerIdRef.current = window.setTimeout(scheduler, lookahead * 1000);
 	};
 
-	const start = () => {
+	const start = async () => {
 		if (!audioContextRef.current) {
-			audioContextRef.current = new AudioContext();
+			const AudioContextClass =
+				window.AudioContext ||
+				(window as unknown as { webkitAudioContext: typeof AudioContext })
+					.webkitAudioContext;
+			audioContextRef.current = new AudioContextClass();
+		}
+
+		// Safari iOS requires resume() to be called within a user gesture
+		if (audioContextRef.current.state === "suspended") {
+			await audioContextRef.current.resume();
 		}
 
 		setIsPlaying(true);

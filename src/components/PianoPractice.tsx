@@ -64,7 +64,7 @@ export function PianoPractice() {
 	};
 
 	return (
-		<div className="flex flex-col gap-6 p-4 max-w-4xl mx-auto w-full min-h-dvh justify-center py-8">
+		<div className="flex flex-col gap-6 p-4 max-w-4xl mx-auto w-full min-h-dvh justify-center py-4">
 			<div className="text-center space-y-1 mb-2">
 				<h1 className="text-3xl font-serif font-medium tracking-tight text-slate-900">
 					Virtuoso
@@ -74,7 +74,7 @@ export function PianoPractice() {
 				</p>
 			</div>
 
-			<Card className="w-full border-0 shadow-xl shadow-slate-200/50 overflow-hidden ring-1 ring-slate-100">
+			<Card className="w-full border-0 shadow-xl shadow-slate-200/50 overflow-hidden ring-1 ring-slate-100 py-4">
 				<CardHeader className="flex flex-col gap-4 bg-slate-50/50 border-b [.border-b]:pb-2 border-slate-100">
 					{/* Row 1: Selectors */}
 					<div className="flex flex-row items-center justify-between w-full">
@@ -150,7 +150,7 @@ export function PianoPractice() {
 						</Button>
 					</div>
 				</CardHeader>
-				<div className="bg-white p-4 min-h-[220px] flex items-center justify-center">
+				<div className="bg-white flex items-center justify-center px-2">
 					<SheetMusic abc={abc} />
 				</div>
 			</Card>
