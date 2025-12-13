@@ -93,21 +93,22 @@ export function PianoPractice() {
 	};
 
 	return (
-		<div className="flex flex-col gap-6 p-4 max-w-4xl mx-auto w-full min-h-dvh justify-center py-4">
-			<div className="text-center space-y-1 mb-2">
-				<h1 className="text-3xl font-serif font-medium tracking-tight text-slate-900">
+		<div className="flex flex-col gap-4 p-3 max-w-4xl mx-auto w-full min-h-dvh justify-center py-4">
+			<div className="text-center space-y-0.5">
+				<h1 className="text-2xl font-serif font-medium tracking-tight text-slate-900">
 					Virtuoso
 				</h1>
-				<p className="text-slate-500 text-sm uppercase tracking-widest font-medium">
+				<p className="text-slate-500 text-xs uppercase tracking-widest font-medium">
 					Scales & Cadences
 				</p>
 			</div>
 
-			<Card className="w-full border-0 shadow-xl shadow-slate-200/50 overflow-hidden ring-1 ring-slate-100 py-4">
-				<CardHeader className="flex flex-col gap-4 bg-slate-50/50 border-b [.border-b]:pb-2 border-slate-100">
-					{/* Row 1: Selectors */}
-					<div className="flex flex-row items-center justify-between w-full">
-						<div className="flex items-center gap-3">
+			<Card className="w-full border border-slate-200/60 shadow-lg shadow-slate-200/40 overflow-hidden py-0">
+				<CardHeader className="flex flex-col gap-2 sm:gap-3 p-3 sm:p-4 border-b [.border-b]:pb-2 border-slate-100">
+					{/* Key & Scale Selectors with Relative Button */}
+					<div className="flex items-center justify-between gap-2 w-full">
+						{/* Root Note Selector */}
+						<div className="flex items-center shrink-0">
 							<Select
 								value={`${root.name}${root.accidental}`}
 								onValueChange={(val) => {
@@ -141,66 +142,81 @@ export function PianoPractice() {
 									})}
 								</SelectContent>
 							</Select>
+						</div>
 
-							{/* Split Scale Type Selector */}
-							<div className="flex items-center gap-2">
-								{/* Major / Minor Toggle */}
-								<div className="flex items-center">
+						{/* Scale Type Selectors - Centered */}
+						<div className="flex flex-col sm:flex-row items-center gap-1.5 flex-1 sm:flex-initial">
+							{/* Major / Minor Toggle */}
+							<div className="flex items-center w-full sm:w-auto justify-center">
+								<Tabs
+									value={scaleType === "Major" ? "Major" : "Minor"}
+									onValueChange={(v) => {
+										if (v === "Major") setScaleType("Major");
+										else setScaleType("Minor (Harmonic)");
+									}}
+									className="w-full sm:w-auto"
+								>
+									<TabsList className="w-full sm:w-auto grid grid-cols-2 h-9">
+										<TabsTrigger value="Major" className="min-w-[70px] text-sm">
+											Major
+										</TabsTrigger>
+										<TabsTrigger value="Minor" className="min-w-[70px] text-sm">
+											Minor
+										</TabsTrigger>
+									</TabsList>
+								</Tabs>
+							</div>
+
+							{/* Minor Type Sub-selector (only if Minor) */}
+							{scaleType.startsWith("Minor") && (
+								<div className="flex items-center w-full sm:w-auto justify-center animate-in fade-in duration-200">
 									<Tabs
-										value={scaleType === "Major" ? "Major" : "Minor"}
-										onValueChange={(v) => {
-											if (v === "Major") setScaleType("Major");
-											else setScaleType("Minor (Harmonic)");
-										}}
+										value={scaleType}
+										onValueChange={(v) => setScaleType(v as ScaleType)}
+										className="w-full sm:w-auto"
 									>
-										<TabsList>
-											<TabsTrigger value="Major">Major</TabsTrigger>
-											<TabsTrigger value="Minor">Minor</TabsTrigger>
+										<TabsList className="w-full sm:w-auto grid grid-cols-2 h-9">
+											<TabsTrigger
+												value="Minor (Harmonic)"
+												className="min-w-[80px] text-sm"
+											>
+												Harmonic
+											</TabsTrigger>
+											<TabsTrigger
+												value="Minor (Melodic)"
+												className="min-w-[80px] text-sm"
+											>
+												Melodic
+											</TabsTrigger>
 										</TabsList>
 									</Tabs>
 								</div>
+							)}
+						</div>
 
-								{/* Minor Type Sub-selector (only if Minor) */}
-								{scaleType.startsWith("Minor") && (
-									<div className="flex items-center animate-in fade-in slide-in-from-left-2 duration-200">
-										<Tabs
-											value={scaleType}
-											onValueChange={(v) => setScaleType(v as ScaleType)}
-										>
-											<TabsList>
-												<TabsTrigger value="Minor (Harmonic)">
-													Harmonic
-												</TabsTrigger>
-												<TabsTrigger value="Minor (Melodic)">
-													Melodic
-												</TabsTrigger>
-											</TabsList>
-										</Tabs>
-									</div>
-								)}
-							</div>
-
+						{/* Relative Key Button */}
+						<div className="flex items-center shrink-0">
 							<Button
 								variant="ghost"
 								size="icon"
 								onClick={handleRelative}
 								title={`Switch to Relative ${scaleType === "Major" ? "Minor" : "Major"}`}
-								className="text-slate-400 hover:text-slate-900"
+								className="text-slate-400 hover:text-slate-900 h-9 w-9"
 							>
-								<ArrowLeftRight className="h-5 w-5" />
+								<ArrowLeftRight className="h-4 w-4" />
 							</Button>
 						</div>
 					</div>
 
-					{/* Row 2: Navigation */}
-					<div className="flex items-center justify-between pt-2 border-t border-slate-200/50 w-full">
+					{/* Navigation Controls */}
+					<div className="flex items-center justify-between w-full gap-2">
 						<Button
 							variant="ghost"
 							size="icon"
 							onClick={handleCirclePrev}
-							className="hover:bg-slate-200/50"
+							className="hover:bg-slate-200/50 h-9 w-9 shrink-0"
 						>
-							<ArrowLeft className="h-5 w-5 text-slate-600" />
+							<ArrowLeft className="h-4 w-4 text-slate-600" />
 						</Button>
 						<Button
 							variant="outline"
@@ -214,9 +230,9 @@ export function PianoPractice() {
 							variant="ghost"
 							size="icon"
 							onClick={handleCircleNext}
-							className="hover:bg-slate-200/50"
+							className="hover:bg-slate-200/50 h-9 w-9 shrink-0"
 						>
-							<ArrowRight className="h-5 w-5 text-slate-600" />
+							<ArrowRight className="h-4 w-4 text-slate-600" />
 						</Button>
 					</div>
 				</CardHeader>
