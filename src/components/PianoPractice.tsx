@@ -18,6 +18,7 @@ import {
 	CIRCLE_OF_FIFTHS as ROOTS, // Use the user-preferred cycle
 	type ScaleType,
 } from "@/lib/music-theory";
+import { Metronome } from "./Metronome";
 import { SheetMusic } from "./SheetMusic";
 
 const SCALE_TYPES: ScaleType[] = [
@@ -155,8 +156,6 @@ export function PianoPractice() {
 			</Card>
 
 			<div className="space-y-4 w-full">
-				{/* Removed Scale Type Select from here as requested */}
-
 				<div className="grid grid-cols-2 gap-3 pt-2">
 					<Button
 						variant="outline"
@@ -175,6 +174,8 @@ export function PianoPractice() {
 						Parallel {scaleType === "Major" ? "Minor" : "Major"}
 					</Button>
 				</div>
+
+				<Metronome />
 			</div>
 		</div>
 	);
