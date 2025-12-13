@@ -17,6 +17,51 @@ export const Route = createRootRoute({
 			{
 				title: "Virtuoso - Piano Practice",
 			},
+			{
+				name: "description",
+				content:
+					"Master your scales and cadences with Virtuoso. A modern, interactive piano practice companion for musicians of all levels.",
+			},
+			// Open Graph
+			{
+				property: "og:type",
+				content: "website",
+			},
+			{
+				property: "og:title",
+				content: "Virtuoso - Piano Practice",
+			},
+			{
+				property: "og:description",
+				content:
+					"Master your scales and cadences with Virtuoso. A modern, interactive piano practice companion.",
+			},
+			{
+				property: "og:image",
+				content: "/screenshot.png",
+			},
+			{
+				property: "og:url",
+				content: "https://virtuoso.secret104278.workers.dev",
+			},
+			// Twitter
+			{
+				name: "twitter:card",
+				content: "summary_large_image",
+			},
+			{
+				name: "twitter:title",
+				content: "Virtuoso - Piano Practice",
+			},
+			{
+				name: "twitter:description",
+				content:
+					"Master your scales and cadences with Virtuoso. A modern, interactive piano practice companion.",
+			},
+			{
+				name: "twitter:image",
+				content: "/screenshot.png",
+			},
 		],
 		links: [
 			{
