@@ -14,8 +14,9 @@ import {
 	getNextFifth,
 	getPrevFifth,
 	getRelativeNote,
+	isStandardKey,
 	type Note,
-	CIRCLE_OF_FIFTHS as ROOTS, // Use the user-preferred cycle
+	SELECTABLE_ROOTS as ROOTS,
 	type ScaleType,
 } from "@/lib/music-theory";
 import { Metronome } from "./Metronome";
@@ -39,9 +40,20 @@ export function PianoPractice() {
 		const type = SCALE_TYPES[Math.floor(Math.random() * SCALE_TYPES.length)];
 		// Randomize based on circle of fifths to ensure nice keys
 		let r = INITIAL_NOTE;
-		const steps = Math.floor(Math.random() * 12) - 6;
-		for (let i = 0; i < Math.abs(steps); i++) {
-			r = steps > 0 ? getNextFifth(r) : getPrevFifth(r);
+		let attempts = 0;
+		while (attempts < 100) {
+			const steps = Math.floor(Math.random() * 12) - 6;
+			let candidate = INITIAL_NOTE;
+			for (let i = 0; i < Math.abs(steps); i++) {
+				candidate =
+					steps > 0 ? getNextFifth(candidate) : getPrevFifth(candidate);
+			}
+			// Double check against standard key rules
+			if (isStandardKey(candidate, type)) {
+				r = candidate;
+				break;
+			}
+			attempts++;
 		}
 		setRoot(r);
 		setScaleType(type);
@@ -89,18 +101,28 @@ export function PianoPractice() {
 								}}
 							>
 								<SelectTrigger className="w-10 h-10 rounded-full bg-slate-900 text-white border-0 p-0 flex items-center justify-center font-bold shadow-md hover:bg-slate-800 transition-colors focus:ring-0 focus:ring-offset-0 [&>svg]:hidden">
-									<SelectValue />
+									<SelectValue>
+										{root.name}
+										{root.accidental}
+									</SelectValue>
 								</SelectTrigger>
 								<SelectContent align="start">
-									{ROOTS.map((r) => (
-										<SelectItem
-											key={`${r.name}${r.accidental}`}
-											value={`${r.name}${r.accidental}`}
-										>
-											{r.name}
-											{r.accidental}
-										</SelectItem>
-									))}
+									{ROOTS.map((r) => {
+										const isStandard = isStandardKey(r, scaleType);
+										return (
+											<SelectItem
+												key={`${r.name}${r.accidental}`}
+												value={`${r.name}${r.accidental}`}
+												className={
+													!isStandard ? "text-slate-400 italic" : "font-medium"
+												}
+											>
+												{r.name}
+												{r.accidental}
+												{!isStandard && " (Theoretical)"}
+											</SelectItem>
+										);
+									})}
 								</SelectContent>
 							</Select>
 

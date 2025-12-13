@@ -139,7 +139,7 @@ export function getScaleNotes(
 // --- Navigation Helpers ---
 
 // Definitive Circle of Fifths (User Preferred: Sharp side -> F# -> Flat side Db ...)
-// Order: C, G, D, A, E, B, F#, Db, Ab, Eb, Bb, F
+// Order: C, G, D, A, E, B, Gb, Db, Ab, Eb, Bb, F
 export const CIRCLE_OF_FIFTHS: Note[] = [
 	{ name: "C", accidental: "", octave: 4 },
 	{ name: "G", accidental: "", octave: 4 },
@@ -147,11 +147,31 @@ export const CIRCLE_OF_FIFTHS: Note[] = [
 	{ name: "A", accidental: "", octave: 4 },
 	{ name: "E", accidental: "", octave: 4 },
 	{ name: "B", accidental: "", octave: 4 },
-	{ name: "F", accidental: "#", octave: 4 },
+	{ name: "G", accidental: "b", octave: 4 }, // Gb (User preferred over F#)
 	{ name: "D", accidental: "b", octave: 4 }, // Db
 	{ name: "A", accidental: "b", octave: 4 }, // Ab
 	{ name: "E", accidental: "b", octave: 4 }, // Eb
 	{ name: "B", accidental: "b", octave: 4 }, // Bb
+	{ name: "F", accidental: "", octave: 4 },
+];
+
+export const SELECTABLE_ROOTS: Note[] = [
+	{ name: "C", accidental: "", octave: 4 },
+	{ name: "G", accidental: "", octave: 4 },
+	{ name: "D", accidental: "", octave: 4 },
+	{ name: "A", accidental: "", octave: 4 },
+	{ name: "E", accidental: "", octave: 4 },
+	{ name: "B", accidental: "", octave: 4 },
+	{ name: "F", accidental: "#", octave: 4 },
+	{ name: "G", accidental: "b", octave: 4 }, // Gb
+	{ name: "D", accidental: "b", octave: 4 }, // Db
+	{ name: "C", accidental: "#", octave: 4 }, // C#
+	{ name: "A", accidental: "b", octave: 4 }, // Ab
+	{ name: "G", accidental: "#", octave: 4 }, // G#
+	{ name: "E", accidental: "b", octave: 4 }, // Eb
+	{ name: "D", accidental: "#", octave: 4 }, // D#
+	{ name: "B", accidental: "b", octave: 4 }, // Bb
+	{ name: "A", accidental: "#", octave: 4 }, // A#
 	{ name: "F", accidental: "", octave: 4 },
 ];
 
@@ -206,17 +226,27 @@ export function getNoteFromSemitone(
 const isSameNote = (n1: Note, n2: Note) =>
 	n1.name === n2.name && n1.accidental === n2.accidental;
 
+// Helper to find index in cycle, supporting enharmonic equivalents
+function findInCircle(note: Note): number {
+	// 1. Strict match
+	let idx = CIRCLE_OF_FIFTHS.findIndex((n) => isSameNote(n, note));
+	if (idx !== -1) return idx;
+
+	// 2. Enharmonic match (absolute semitone)
+	// We ignore octave for the cycle comparison, just check pitch chroma
+	const targetVal = getNoteSemitone(note);
+	idx = CIRCLE_OF_FIFTHS.findIndex((n) => getNoteSemitone(n) === targetVal);
+	return idx;
+}
+
 export function getNextFifth(root: Note): Note {
 	// Find current note in cycle
-	const idx = CIRCLE_OF_FIFTHS.findIndex((n) => isSameNote(n, root));
+	const idx = findInCircle(root);
 	if (idx !== -1) {
 		return CIRCLE_OF_FIFTHS[(idx + 1) % CIRCLE_OF_FIFTHS.length];
 	}
-	// Fallback if note not in strict cycle (e.g. from generated relative? shouldn't happen if strict)
-	// Try enharmonic match?
-	// Let's just fallback to calculation but prefer cycle logic.
+	// Fallback logic shouldn't really be reached if findInCircle covers enharmonics
 	const current = getNoteSemitone(root);
-	// Manual check for F -> C (Flat to Natural)
 	if (root.name === "F" && root.accidental === "")
 		return { name: "C", accidental: "", octave: 4 };
 	const preferFlat = root.accidental.includes("b");
@@ -224,7 +254,7 @@ export function getNextFifth(root: Note): Note {
 }
 
 export function getPrevFifth(root: Note): Note {
-	const idx = CIRCLE_OF_FIFTHS.findIndex((n) => isSameNote(n, root));
+	const idx = findInCircle(root);
 	if (idx !== -1) {
 		return CIRCLE_OF_FIFTHS[
 			(idx - 1 + CIRCLE_OF_FIFTHS.length) % CIRCLE_OF_FIFTHS.length
@@ -402,4 +432,41 @@ ${groupedScaleABC} :|] ${rhCadenceBar} |]
 V: 2 bass
 ${groupedLhScaleABC} :|] ${lhCadenceBar} |]
 `;
+}
+
+export function isStandardKey(root: Note, type: ScaleType): boolean {
+	const isMinor = type.startsWith("Minor");
+	const name = root.name;
+	const acc = root.accidental;
+
+	// Major Keys Avoid:
+	// G# Major (8#) -> prefer Ab (4b)
+	// D# Major (9#) -> prefer Eb (3b)
+	// A# Major (10#) -> prefer Bb (2b)
+	// E# Major (11#) -> prefer F (1b)
+	// B# Major (12#) -> prefer C (0)
+	if (!isMinor) {
+		if (name === "G" && acc === "#") return false;
+		if (name === "D" && acc === "#") return false;
+		if (name === "A" && acc === "#") return false;
+		if (name === "E" && acc === "#") return false;
+		if (name === "B" && acc === "#") return false;
+		if (name === "F" && acc === "#") return false; // Prefer Gb Major
+	}
+
+	// Minor Keys Avoid:
+	// Ab Minor (7b) -> prefer G# Minor (5#)
+	// Db Minor (8b) -> prefer C# Minor (4#)
+	// Gb Minor (9b) -> prefer F# Minor (3#)
+	// Cb Minor (10b) -> prefer B  Minor (2#)
+	// Fb Minor (11b) -> prefer E  Minor (1#)
+	if (isMinor) {
+		if (name === "A" && acc === "b") return false;
+		if (name === "D" && acc === "b") return false;
+		if (name === "G" && acc === "b") return false; // Gb Minor
+		if (name === "C" && acc === "b") return false;
+		if (name === "F" && acc === "b") return false;
+	}
+
+	return true;
 }
