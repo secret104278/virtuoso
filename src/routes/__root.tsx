@@ -15,6 +15,10 @@ export const Route = createRootRoute({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
+				name: "theme-color",
+				content: "#000000",
+			},
+			{
 				title: "Virtuoso - Piano Practice",
 			},
 			{
@@ -70,7 +74,11 @@ export const Route = createRootRoute({
 			},
 			{
 				rel: "icon",
-				href: "/logo.svg",
+				href: "/favicon.ico",
+			},
+			{
+				rel: "apple-touch-icon",
+				href: "/logo192.png",
 			},
 		],
 	}),
