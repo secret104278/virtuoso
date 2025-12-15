@@ -13,3 +13,6 @@ export const getRouter = () => {
 
 	return router;
 };
+
+// Export router instance for client-side rendering
+export const router = getRouter();

@@ -1,7 +1,4 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "virtuoso",
-  "compatibility_date": "2025-09-02",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry"
+  "name": "virtuoso"
 }
