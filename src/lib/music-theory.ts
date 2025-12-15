@@ -1,3 +1,5 @@
+import _ from "lodash";
+
 // Basic definitions
 export type NoteName = "C" | "D" | "E" | "F" | "G" | "A" | "B";
 export type Accidental = "" | "#" | "b" | "##" | "bb" | "n";
@@ -155,25 +157,25 @@ export const CIRCLE_OF_FIFTHS: Note[] = [
 	{ name: "F", accidental: "", octave: 4 },
 ];
 
-export const SELECTABLE_ROOTS: Note[] = [
-	{ name: "C", accidental: "", octave: 4 },
-	{ name: "G", accidental: "", octave: 4 },
-	{ name: "D", accidental: "", octave: 4 },
+const CIRCLE_OF_FIFTHS_MINOR: Note[] = [
 	{ name: "A", accidental: "", octave: 4 },
 	{ name: "E", accidental: "", octave: 4 },
 	{ name: "B", accidental: "", octave: 4 },
 	{ name: "F", accidental: "#", octave: 4 },
-	{ name: "G", accidental: "b", octave: 4 }, // Gb
-	{ name: "D", accidental: "b", octave: 4 }, // Db
-	{ name: "C", accidental: "#", octave: 4 }, // C#
-	{ name: "A", accidental: "b", octave: 4 }, // Ab
-	{ name: "G", accidental: "#", octave: 4 }, // G#
-	{ name: "E", accidental: "b", octave: 4 }, // Eb
-	{ name: "D", accidental: "#", octave: 4 }, // D#
-	{ name: "B", accidental: "b", octave: 4 }, // Bb
-	{ name: "A", accidental: "#", octave: 4 }, // A#
+	{ name: "C", accidental: "#", octave: 4 },
+	{ name: "G", accidental: "#", octave: 4 },
+	{ name: "E", accidental: "b", octave: 4 },
+	{ name: "B", accidental: "b", octave: 4 },
 	{ name: "F", accidental: "", octave: 4 },
+	{ name: "C", accidental: "b", octave: 4 },
+	{ name: "G", accidental: "b", octave: 4 },
+	{ name: "D", accidental: "b", octave: 4 },
 ];
+
+export const SELECTABLE_ROOTS: readonly Note[] = _.uniqBy(
+	[...CIRCLE_OF_FIFTHS, ...CIRCLE_OF_FIFTHS_MINOR],
+	(n) => getNoteSemitone(n),
+).sort((a, b) => getNoteSemitone(a) - getNoteSemitone(b));
 
 export function getNoteFromSemitone(
 	semitone: number,
@@ -222,61 +224,37 @@ export function getNoteFromSemitone(
 	return { ...options[preferFlat ? 1 : 0], octave: 4 };
 }
 
-// Comparison helper
-const isSameNote = (n1: Note, n2: Note) =>
-	n1.name === n2.name && n1.accidental === n2.accidental;
-
-// Helper to find index in cycle, supporting enharmonic equivalents
 function findInCircle(note: Note): number {
-	// 1. Strict match
-	let idx = CIRCLE_OF_FIFTHS.findIndex((n) => isSameNote(n, note));
-	if (idx !== -1) return idx;
+	return CIRCLE_OF_FIFTHS.findIndex(
+		(n) => getNoteSemitone(n) === getNoteSemitone(note),
+	);
+}
 
-	// 2. Enharmonic match (absolute semitone)
-	// We ignore octave for the cycle comparison, just check pitch chroma
-	const targetVal = getNoteSemitone(note);
-	idx = CIRCLE_OF_FIFTHS.findIndex((n) => getNoteSemitone(n) === targetVal);
-	return idx;
+function findInCircleMinor(note: Note): number {
+	return CIRCLE_OF_FIFTHS_MINOR.findIndex(
+		(n) => getNoteSemitone(n) === getNoteSemitone(note),
+	);
 }
 
 export function getNextFifth(root: Note): Note {
-	// Find current note in cycle
 	const idx = findInCircle(root);
-	if (idx !== -1) {
-		return CIRCLE_OF_FIFTHS[(idx + 1) % CIRCLE_OF_FIFTHS.length];
-	}
-	// Fallback logic shouldn't really be reached if findInCircle covers enharmonics
-	const current = getNoteSemitone(root);
-	if (root.name === "F" && root.accidental === "")
-		return { name: "C", accidental: "", octave: 4 };
-	const preferFlat = root.accidental.includes("b");
-	return getNoteFromSemitone(current + 7, preferFlat);
+	return CIRCLE_OF_FIFTHS[(idx + 1) % CIRCLE_OF_FIFTHS.length];
 }
 
 export function getPrevFifth(root: Note): Note {
 	const idx = findInCircle(root);
-	if (idx !== -1) {
-		return CIRCLE_OF_FIFTHS[
-			(idx - 1 + CIRCLE_OF_FIFTHS.length) % CIRCLE_OF_FIFTHS.length
-		];
-	}
-
-	const current = getNoteSemitone(root);
-	return getNoteFromSemitone(current - 7, true);
+	return CIRCLE_OF_FIFTHS[
+		(idx - 1 + CIRCLE_OF_FIFTHS.length) % CIRCLE_OF_FIFTHS.length
+	];
 }
 
 export function getRelativeNote(root: Note, type: ScaleType): Note {
-	const current = getNoteSemitone(root);
-	let note: Note;
 	if (type === "Major") {
-		note = getNoteFromSemitone(
-			current - 3,
-			root.accidental.includes("b") || root.name === "F",
-		);
-		return getStandardKey(note, "Minor (Natural)"); // Relative is always natural minor context for key naming
+		const idx = findInCircle(root);
+		return CIRCLE_OF_FIFTHS_MINOR[idx];
 	} else {
-		note = getNoteFromSemitone(current + 3, root.accidental.includes("b"));
-		return getStandardKey(note, "Major");
+		const idx = findInCircleMinor(root);
+		return CIRCLE_OF_FIFTHS[idx];
 	}
 }
 
@@ -346,7 +324,7 @@ export function generateGrandStaffABC(root: Note, type: ScaleType): string {
 	// Basic Rule:
 	// Major Key: Root Major.
 	// Minor Key: Root Minor (Natural).
-	const isMinor = type.startsWith("Minor");
+	const isMinor = type === "Minor (Harmonic)" || type === "Minor (Melodic)";
 	const keySigString = `${root.name}${root.accidental}${isMinor ? "m" : ""}`;
 
 	// Generate the notes of the Key Signature to build our Expected Accidental Map
@@ -435,60 +413,4 @@ ${groupedScaleABC} :|] ${rhCadenceBar} |]
 V: 2 bass
 ${groupedLhScaleABC} :|] ${lhCadenceBar} |]
 `;
-}
-
-export function isStandardKey(root: Note, type: ScaleType): boolean {
-	const isMinor = type.startsWith("Minor");
-	const name = root.name;
-	const acc = root.accidental;
-
-	// Major Keys Avoid:
-	// G# Major (8#) -> prefer Ab (4b)
-	// D# Major (9#) -> prefer Eb (3b)
-	// A# Major (10#) -> prefer Bb (2b)
-	// E# Major (11#) -> prefer F (1b)
-	// B# Major (12#) -> prefer C (0)
-	if (!isMinor) {
-		if (name === "G" && acc === "#") return false;
-		if (name === "D" && acc === "#") return false;
-		if (name === "A" && acc === "#") return false;
-		if (name === "E" && acc === "#") return false;
-		if (name === "B" && acc === "#") return false;
-		if (name === "F" && acc === "#") return false; // Prefer Gb Major
-		if (name === "C" && acc === "#") return false; // Prefer Db Major
-	}
-
-	// Minor Keys Avoid:
-	// Ab Minor (7b) -> prefer G# Minor (5#)
-	// Db Minor (8b) -> prefer C# Minor (4#)
-	// Gb Minor (9b) -> prefer F# Minor (3#)
-	// Cb Minor (10b) -> prefer B  Minor (2#)
-	// Fb Minor (11b) -> prefer E  Minor (1#)
-	if (isMinor) {
-		if (name === "A" && acc === "b") return false;
-		if (name === "D" && acc === "b") return false;
-		if (name === "G" && acc === "b") return false; // Gb Minor
-		if (name === "C" && acc === "b") return false;
-		if (name === "F" && acc === "b") return false;
-	}
-
-	return true;
-}
-
-export function getStandardKey(root: Note, type: ScaleType): Note {
-	if (isStandardKey(root, type)) return root;
-
-	// If not standard, try enharmonic equivalent
-	const semitone = getNoteSemitone(root);
-	// Try both sharp and flat version, see which one is standard
-	// We can assume strict enharmonic check here for standard roots
-	const candidates = SELECTABLE_ROOTS.filter(
-		(r) => getNoteSemitone(r) === semitone,
-	);
-
-	for (const c of candidates) {
-		if (isStandardKey(c, type)) return c;
-	}
-
-	return root; // Fallback
 }

@@ -1,3 +1,4 @@
+import _ from "lodash";
 import { ArrowLeft, ArrowLeftRight, ArrowRight, Shuffle } from "lucide-react";
 import { createParser, parseAsStringEnum, useQueryState } from "nuqs";
 import { useMemo } from "react";
@@ -16,9 +17,7 @@ import {
 	getNextFifth,
 	getPrevFifth,
 	getRelativeNote,
-	isStandardKey,
 	type Note,
-	SELECTABLE_ROOTS as ROOTS,
 	type ScaleType,
 	SELECTABLE_ROOTS,
 } from "@/lib/music-theory";
@@ -59,27 +58,14 @@ export function PianoPractice() {
 	const abc = useMemo(() => generateABC(root, scaleType), [root, scaleType]);
 
 	const handleRandom = () => {
-		const type = SCALE_TYPES[Math.floor(Math.random() * SCALE_TYPES.length)];
-		// Randomize based on circle of fifths to ensure nice keys
-		let r = INITIAL_NOTE;
-		let attempts = 0;
-		while (attempts < 100) {
-			const steps = Math.floor(Math.random() * 12) - 6;
-			let candidate = INITIAL_NOTE;
-			for (let i = 0; i < Math.abs(steps); i++) {
-				candidate =
-					steps > 0 ? getNextFifth(candidate) : getPrevFifth(candidate);
+		setRoot((prev) => {
+			let next = _.sample(SELECTABLE_ROOTS) ?? SELECTABLE_ROOTS[0];
+			while (prev === next) {
+				next = _.sample(SELECTABLE_ROOTS) ?? SELECTABLE_ROOTS[0];
 			}
-			// Double check against standard key rules
-			if (isStandardKey(candidate, type)) {
-				r = candidate;
-				break;
-			}
-			attempts++;
-		}
-
-		setRoot(r);
-		setScaleType(type);
+			return next;
+		});
+		setScaleType("Major");
 	};
 
 	const handleCircleNext = () => setRoot(getNextFifth(root));
@@ -112,7 +98,7 @@ export function PianoPractice() {
 							<Select
 								value={`${root.name}${root.accidental}`}
 								onValueChange={(val) => {
-									const selected = ROOTS.find(
+									const selected = SELECTABLE_ROOTS.find(
 										(r) => `${r.name}${r.accidental}` === val,
 									);
 									if (selected) setRoot(selected);
@@ -125,15 +111,12 @@ export function PianoPractice() {
 									</SelectValue>
 								</SelectTrigger>
 								<SelectContent align="start">
-									{ROOTS.map((r) => {
-										const isStandard = isStandardKey(r, scaleType);
+									{SELECTABLE_ROOTS.map((r) => {
 										return (
 											<SelectItem
 												key={`${r.name}${r.accidental}`}
 												value={`${r.name}${r.accidental}`}
-												className={
-													!isStandard ? "text-slate-400 italic" : "font-medium"
-												}
+												className={"font-medium"}
 											>
 												{r.name}
 												{r.accidental}
