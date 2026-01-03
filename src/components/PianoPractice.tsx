@@ -1,3 +1,4 @@
+import confetti from "canvas-confetti";
 import _ from "lodash";
 import {
 	ArrowLeft,
@@ -86,15 +87,32 @@ export function PianoPractice() {
 
 	const abc = useMemo(() => generateABC(root, scaleType), [root, scaleType]);
 
-	const handlePracticed = useCallback(() => {
-		const keyId = getMajorKeyId(root, scaleType);
-		const newCounts = {
-			...practiceCounts,
-			[keyId]: (practiceCounts[keyId] || 0) + 1,
-		};
-		setPracticeCounts(newCounts);
-		localStorage.setItem("practice_counts", JSON.stringify(newCounts));
-	}, [root, scaleType, practiceCounts]);
+	const handlePracticed = useCallback(
+		(event: React.MouseEvent<HTMLButtonElement>) => {
+			const keyId = getMajorKeyId(root, scaleType);
+			const newCounts = {
+				...practiceCounts,
+				[keyId]: (practiceCounts[keyId] || 0) + 1,
+			};
+			setPracticeCounts(newCounts);
+			localStorage.setItem("practice_counts", JSON.stringify(newCounts));
+
+			const rect = event.currentTarget.getBoundingClientRect();
+			confetti({
+				particleCount: 50,
+				spread: 70,
+				origin: {
+					x: (rect.left + rect.width / 2) / window.innerWidth,
+					y: (rect.top + rect.height / 2) / window.innerHeight,
+				},
+				colors: ["#FFD700", "#FDB931", "#FFFFFF"],
+				ticks: 150,
+				gravity: 1.5,
+				scalar: 0.8,
+			});
+		},
+		[root, scaleType, practiceCounts],
+	);
 
 	const handleRandom = () => {
 		// Weighted selection: pick from keys with minimum practice count
@@ -198,7 +216,7 @@ export function PianoPractice() {
 											{chartData.map((entry) => (
 												<Cell
 													key={entry.key}
-													fill="oklch(0.627 0.194 149.214)"
+													fill="oklch(0.828 0.189 84.429)"
 													fillOpacity={entry.count > 0 ? entry.opacity : 0.1}
 													className="transition-all duration-300 hover:brightness-90"
 												/>
@@ -257,13 +275,13 @@ export function PianoPractice() {
 											</p>
 											<p className="text-sm leading-relaxed">
 												由根音出發，疊加一個
-												<span className="text-blue-600 font-bold">
+												<span className="text-amber-600 font-bold">
 													{scaleType === "Major"
 														? "大三度 (4個半音)"
 														: "小三度 (3個半音)"}
 												</span>
 												，再疊加一個
-												<span className="text-blue-600 font-bold">
+												<span className="text-amber-600 font-bold">
 													{scaleType === "Major"
 														? "小三度 (3個半音)"
 														: "大三度 (4個半音)"}
@@ -291,8 +309,8 @@ export function PianoPractice() {
 											</p>
 											<p className="text-sm leading-relaxed">
 												將主和弦的音重新排列：第 5 音在最底，上方分別距離
-												<span className="text-blue-600 font-bold">四度</span>與
-												<span className="text-blue-600 font-bold">六度</span>
+												<span className="text-amber-600 font-bold">四度</span>與
+												<span className="text-amber-600 font-bold">六度</span>
 												。這常用於屬和弦前的預備。
 											</p>
 										</div>
@@ -302,11 +320,11 @@ export function PianoPractice() {
 											</p>
 											<p className="text-sm leading-relaxed">
 												從音階第 5 音出發，疊加一個
-												<span className="text-blue-600 font-bold">
+												<span className="text-amber-600 font-bold">
 													大三度 (4個半音)
 												</span>
 												、再疊加兩個
-												<span className="text-blue-600 font-bold">
+												<span className="text-amber-600 font-bold">
 													小三度 (3個半音)
 												</span>
 												。
@@ -461,7 +479,7 @@ export function PianoPractice() {
 							variant="ghost"
 							size="sm"
 							onClick={handlePracticed}
-							className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 text-[10px] h-7 px-3 uppercase tracking-wider font-bold"
+							className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 text-[10px] h-7 px-3 uppercase tracking-wider font-bold"
 						>
 							<CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
 							Mark as Practiced (
