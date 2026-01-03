@@ -1,4 +1,5 @@
 import confetti from "canvas-confetti";
+import { format, startOfDay, subDays } from "date-fns";
 import _ from "lodash";
 import {
 	ArrowLeft,
@@ -6,6 +7,8 @@ import {
 	ArrowRight,
 	BarChart3,
 	CheckCircle2,
+	ChevronLeft,
+	ChevronRight,
 	Info,
 	Shuffle,
 } from "lucide-react";
@@ -18,7 +21,6 @@ import {
 	type ChartConfig,
 	ChartContainer,
 	ChartTooltip,
-	ChartTooltipContent,
 } from "@/components/ui/chart";
 import {
 	Dialog,
@@ -78,24 +80,59 @@ const scaleTypeParser = parseAsStringEnum<ScaleType>(SCALE_TYPES)
 export function PianoPractice() {
 	const [root, setRoot] = useQueryState("root", rootNoteParser);
 	const [scaleType, setScaleType] = useQueryState("scale", scaleTypeParser);
-	const [practiceCounts, setPracticeCounts] = useState<Record<string, number>>(
-		() => {
-			const saved = localStorage.getItem("practice_counts");
-			return saved ? JSON.parse(saved) : {};
-		},
-	);
+	const [practiceHistory, setPracticeHistory] = useState<
+		Record<string, { t: number; s: ScaleType }[]>
+	>(() => {
+		const saved = localStorage.getItem("practice_logs");
+		if (saved) return JSON.parse(saved);
+
+		// Migration from old format
+		const oldSaved = localStorage.getItem("practice_counts");
+		if (oldSaved) {
+			const oldCounts: Record<string, number> = JSON.parse(oldSaved);
+			const migrated: Record<string, { t: number; s: ScaleType }[]> = {};
+			for (const [key, count] of Object.entries(oldCounts)) {
+				migrated[key] = Array.from({ length: count }, () => ({
+					t: Date.now(),
+					s: "Major",
+				}));
+			}
+			localStorage.setItem("practice_logs", JSON.stringify(migrated));
+			localStorage.removeItem("practice_counts");
+			return migrated;
+		}
+		return {};
+	});
+
+	// Stats window state (offset from "most recent Thursday" in days)
+	const [statsOffset, setStatsOffset] = useState(0);
+
+	const statsWindow = useMemo(() => {
+		const today = startOfDay(new Date());
+		// Find the most recent Thursday.
+		const dayOfWeek = today.getDay(); // 0: Sun, ..., 4: Thu
+		const diffToThu = (dayOfWeek - 4 + 7) % 7;
+		const latestThursday = subDays(today, diffToThu);
+
+		const start = subDays(latestThursday, statsOffset);
+		const end = subDays(start, -6); // 7 days window (Thu to Wed)
+		return { start, end };
+	}, [statsOffset]);
 
 	const abc = useMemo(() => generateABC(root, scaleType), [root, scaleType]);
 
 	const handlePracticed = useCallback(
 		(event: React.MouseEvent<HTMLButtonElement>) => {
 			const keyId = getMajorKeyId(root, scaleType);
-			const newCounts = {
-				...practiceCounts,
-				[keyId]: (practiceCounts[keyId] || 0) + 1,
+			const newHistory = {
+				...practiceHistory,
+				[keyId]: [
+					...(practiceHistory[keyId] || []),
+					{ t: Date.now(), s: scaleType },
+				],
 			};
-			setPracticeCounts(newCounts);
-			localStorage.setItem("practice_counts", JSON.stringify(newCounts));
+			setPracticeHistory(newHistory);
+			localStorage.setItem("practice_logs", JSON.stringify(newHistory));
 
 			const rect = event.currentTarget.getBoundingClientRect();
 			confetti({
@@ -111,19 +148,19 @@ export function PianoPractice() {
 				scalar: 0.8,
 			});
 		},
-		[root, scaleType, practiceCounts],
+		[root, scaleType, practiceHistory],
 	);
 
 	const handleRandom = () => {
 		// Weighted selection: pick from keys with minimum practice count
 		const counts = SELECTABLE_ROOTS.map((r) => {
 			const keyId = getMajorKeyId(r, "Major");
-			return practiceCounts[keyId] || 0;
+			return practiceHistory[keyId]?.length || 0;
 		});
 		const minCount = Math.min(...counts);
 		const candidates = SELECTABLE_ROOTS.filter((r) => {
 			const keyId = getMajorKeyId(r, "Major");
-			return (practiceCounts[keyId] || 0) <= minCount;
+			return (practiceHistory[keyId]?.length || 0) <= minCount;
 		});
 
 		setRoot((prev) => {
@@ -151,29 +188,72 @@ export function PianoPractice() {
 	};
 
 	const chartData = useMemo(() => {
+		const now = Date.now();
+		const dayInMs = 24 * 60 * 60 * 1000;
+
 		const data = SELECTABLE_ROOTS.map((r) => {
 			const keyId = `${r.name}${r.accidental}`;
+			const allLogs = practiceHistory[keyId] || [];
+
+			// Filter logs for current window
+			const windowLogs = allLogs.filter(
+				(l) =>
+					l.t >= statsWindow.start.getTime() &&
+					l.t <= statsWindow.end.getTime() + dayInMs,
+			);
+
+			const lastLog = _.maxBy(allLogs, "t");
+			const lastPracticed = lastLog ? lastLog.t : 0;
+
+			// Scale types breakdown (for the window)
+			const breakdown = _.countBy(windowLogs, "s");
+
+			// Recency score (based on all logs, for visual hint)
+			const daysSinceLast = lastPracticed
+				? (now - lastPracticed) / dayInMs
+				: 999;
+			const recencyScore = Math.max(0, 1 - daysSinceLast / 14);
+
 			return {
 				key: keyId,
-				count: practiceCounts[keyId] || 0,
+				count: windowLogs.length,
+				totalCount: allLogs.length,
+				lastPracticed,
+				recencyScore,
+				breakdown,
 			};
 		});
+
 		const maxCount = Math.max(...data.map((d) => d.count), 1);
 		return data.map((d) => ({
 			...d,
-			opacity: 0.15 + (d.count / maxCount) * 0.85,
+			opacity: 0.2 + (d.count / maxCount) * 0.6 + d.recencyScore * 0.2,
 		}));
-	}, [practiceCounts]);
+	}, [practiceHistory, statsWindow]);
 
 	const chartConfig = {
 		count: {
 			label: "練習次數",
-			color: "hsl(var(--primary))",
+			color: "oklch(0.828 0.189 84.429)",
 		},
 	} satisfies ChartConfig;
 
+	const statsSummary = useMemo(() => {
+		const allLogs = Object.values(practiceHistory).flat();
+		const windowLogs = allLogs.filter(
+			(l) =>
+				l.t >= statsWindow.start.getTime() &&
+				l.t <= statsWindow.end.getTime() + 24 * 60 * 60 * 1000,
+		);
+
+		return {
+			total: allLogs.length,
+			windowTotal: windowLogs.length,
+		};
+	}, [practiceHistory, statsWindow]);
+
 	return (
-		<div className="flex flex-col gap-4 p-3 max-w-4xl mx-auto w-full min-h-dvh justify-center py-4">
+		<div className="flex flex-col gap-4 p-3 max-w-4xl mx-auto w-full min-h-dvh justify-center py-4 text-left">
 			<div className="relative text-center space-y-0.5">
 				<div className="absolute top-0 left-0">
 					<Dialog>
@@ -182,18 +262,64 @@ export function PianoPractice() {
 								<BarChart3 className="h-4 w-4 text-slate-400" />
 							</Button>
 						</DialogTrigger>
-						<DialogContent className="sm:max-w-[600px] w-[95vw]">
+						<DialogContent className="sm:max-w-[640px] w-[95vw]">
 							<DialogHeader>
-								<DialogTitle>練習進度總覽</DialogTitle>
+								<div className="flex flex-col gap-4 pr-6">
+									<div className="flex items-center justify-between">
+										<DialogTitle>練習進度總覽</DialogTitle>
+										<div className="flex gap-4 text-right">
+											<div>
+												<p className="text-[10px] text-slate-400 uppercase tracking-tight">
+													總練習次數
+												</p>
+												<p className="text-lg font-mono font-bold text-slate-900">
+													{statsSummary.total}
+												</p>
+											</div>
+											<div>
+												<p className="text-[10px] text-slate-400 uppercase tracking-tight">
+													期間練習
+												</p>
+												<p className="text-lg font-mono font-bold text-amber-600">
+													{statsSummary.windowTotal}
+												</p>
+											</div>
+										</div>
+									</div>
+
+									{/* Week Selector */}
+									<div className="flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100">
+										<Button
+											variant="ghost"
+											size="icon"
+											className="h-8 w-8"
+											onClick={() => setStatsOffset((prev) => prev + 1)}
+										>
+											<ChevronLeft className="h-4 w-4" />
+										</Button>
+										<div className="text-sm font-medium text-slate-600 font-mono text-center">
+											{format(statsWindow.start, "EEE, MMM dd")} -{" "}
+											{format(statsWindow.end, "EEE, MMM dd, yyyy")}
+										</div>
+										<Button
+											variant="ghost"
+											size="icon"
+											className="h-8 w-8"
+											onClick={() => setStatsOffset((prev) => prev - 1)}
+										>
+											<ChevronRight className="h-4 w-4" />
+										</Button>
+									</div>
+								</div>
 							</DialogHeader>
-							<div className="py-6 overflow-hidden">
+							<div className="py-6 overflow-hidden text-left">
 								<ChartContainer
 									config={chartConfig}
-									className="h-[300px] w-full"
+									className="h-[320px] w-full"
 								>
 									<BarChart
 										data={chartData}
-										margin={{ top: 20, right: 10, left: 10, bottom: 20 }}
+										margin={{ top: 20, right: 10, left: 10, bottom: 40 }}
 									>
 										<CartesianGrid
 											vertical={false}
@@ -210,7 +336,50 @@ export function PianoPractice() {
 										<YAxis hide />
 										<ChartTooltip
 											cursor={{ fill: "rgba(0,0,0,0.04)" }}
-											content={<ChartTooltipContent hideLabel />}
+											content={({ active, payload }) => {
+												if (!active || !payload?.length) return null;
+												const data = payload[0].payload;
+												return (
+													<div className="bg-white border border-slate-200 p-3 rounded-lg shadow-xl text-xs space-y-2 text-left">
+														<div className="flex items-center justify-between gap-4">
+															<span className="font-bold text-sm">
+																{data.key} 大小調
+															</span>
+															<span className="text-slate-400 font-mono">
+																期間 {data.count} 次 / 累計 {data.totalCount} 次
+															</span>
+														</div>
+														{data.lastPracticed > 0 && (
+															<div className="text-slate-500">
+																上次練習：
+																{new Date(data.lastPracticed).toLocaleString(
+																	"zh-TW",
+																	{
+																		month: "numeric",
+																		day: "numeric",
+																		hour: "2-digit",
+																		minute: "2-digit",
+																	},
+																)}
+															</div>
+														)}
+														{data.count > 0 && (
+															<div className="pt-1 border-t border-slate-100 flex gap-2 flex-wrap">
+																{Object.entries(data.breakdown).map(
+																	([type, count]) => (
+																		<span
+																			key={type}
+																			className="bg-slate-50 px-1.5 py-0.5 rounded text-[10px] text-slate-600 border border-slate-100"
+																		>
+																			{type.split(" ")[0]}: {count as number}
+																		</span>
+																	),
+																)}
+															</div>
+														)}
+													</div>
+												);
+											}}
 										/>
 										<Bar dataKey="count" radius={[6, 6, 0, 0]} barSize={24}>
 											{chartData.map((entry) => (
@@ -251,7 +420,7 @@ export function PianoPractice() {
 									終止式說明
 								</DialogTitle>
 							</DialogHeader>
-							<div className="space-y-6 py-4">
+							<div className="space-y-6 py-4 text-left">
 								<div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
 									<p className="font-bold mb-2 text-slate-900 text-base">
 										級數：
@@ -333,7 +502,7 @@ export function PianoPractice() {
 											</p>
 										</div>
 									</div>
-									<p className="text-xs text-slate-400 mt-4 italic">
+									<p className="text-xs text-slate-400 mt-4 italic text-center">
 										* 譜面上為了聲部進行流暢，會使用不同的轉位配置。
 									</p>
 								</div>
@@ -483,7 +652,7 @@ export function PianoPractice() {
 						>
 							<CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />
 							Mark as Practiced (
-							{practiceCounts[getMajorKeyId(root, scaleType)] || 0})
+							{practiceHistory[getMajorKeyId(root, scaleType)]?.length || 0})
 						</Button>
 					</div>
 				</CardHeader>
