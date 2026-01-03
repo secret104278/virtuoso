@@ -237,6 +237,12 @@ export function getRelativeNote(root: Note, type: ScaleType): Note {
 	return toCircle[findInCircle(fromCircle, root)];
 }
 
+export function getMajorKeyId(root: Note, type: ScaleType): string {
+	const majorNote =
+		type === "Major" ? root : getRelativeNote(root, "Minor (Harmonic)");
+	return `${majorNote.name}${majorNote.accidental}`;
+}
+
 // --- ABC Generation with Key Signature & Rhythm logic ---
 
 const ABC_ACCIDENTALS: Record<Accidental, string> = {
